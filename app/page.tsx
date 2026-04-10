@@ -421,7 +421,7 @@ export default function HomePage77() {
             {TESTIMONIALS.map(t => (
               <div key={t.name} style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:16, padding:"22px 20px" }}>
                 <div style={{ display:"flex", gap:2, marginBottom:10 }}>{Array.from({length:t.stars}).map((_,i)=><span key={i}>{Ic.Star()}</span>)}</div>
-                <p style={{ fontSize:14, color:"#888", lineHeight:1.7, margin:"0 0 16px" }}>"{t.text}"</p>
+                <p style={{ fontSize:14, color:"#888", lineHeight:1.7, margin:"0 0 16px" }}>{`"${t.text}"`}</p>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <div style={{ width:32, height:32, borderRadius:"50%", background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:B.black, fontFamily:"'Rajdhani',sans-serif" }}>
                     {t.name.split(" ").map(w=>w[0]).slice(0,2).join("")}
