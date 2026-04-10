@@ -149,7 +149,7 @@ function BuyModal({ product, onClose }: { product: typeof PRODUCTS[0] | null; on
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:8, justifyContent:"center", marginTop:14 }}>
           <Logo77 size={18} />
-          <span style={{ fontSize:11, color:B.textMuted ?? "#444", fontFamily:"'Rajdhani',sans-serif" }}>77 Assistech — Certificado ICP-Brasil</span>
+          <span style={{ fontSize:11, color:B.textSec ?? "#444", fontFamily:"'Rajdhani',sans-serif" }}>77 Assistech — Certificado ICP-Brasil</span>
         </div>
       </div>
     </div>
@@ -237,7 +237,7 @@ export default function HomePage77() {
             {[{v:"+5.000",l:"Certificados emitidos"},{v:"< 1h",l:"Tempo de emissão"},{v:"4.9 ★",l:"Satisfação"},{v:"5 anos",l:"No mercado"}].map(s => (
               <div key={s.l}>
                 <div style={{ fontSize:"clamp(20px,2.5vw,28px)", fontWeight:700, color:B.white, letterSpacing:"-0.5px", fontFamily:"'Rajdhani',sans-serif" }}>{s.v}</div>
-                <div style={{ fontSize:12.5, color:B.textMuted ?? "#555", marginTop:2 }}>{s.l}</div>
+                <div style={{ fontSize:12.5, color:B.textSec ?? "#555", marginTop:2 }}>{s.l}</div>
               </div>
             ))}
           </div>
