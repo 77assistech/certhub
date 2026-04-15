@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { AssinaturasTab } from "./assinaturas-tab";
 import { ComissoesTab } from "./comissoes-tab";
 import { ParceirosTab } from "./parceiros-tab";
+import { PedidosTab } from "./pedidos-tab";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const B = {
@@ -635,7 +636,7 @@ export default function AdminPanel77() {
 
         {/* content */}
         <main style={{ flex:1, padding:"18px 20px", overflowY:"auto", animation:"fadeIn 0.2s ease both" }}>
-          {tab==="orders"       && <OrdersTab      orders={orders} onStatusChange={handleStatus}/>}
+          {tab==="orders"       && <PedidosTab/>}
           {tab==="commissions"  && <ComissoesTab/>}
           {tab==="partners"     && <ParceirosTab/>}
           {tab==="assinaturas"  && <AssinaturasTab/>}
