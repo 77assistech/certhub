@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { AssinaturasTab } from "./assinaturas-tab";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const B = {
@@ -47,6 +48,7 @@ function Logo({ compact = false }: { compact?: boolean }) {
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Ic = {
   Orders:  ()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  Subs:    ()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
   Comm:    ()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>,
   Partners:()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   Search:  ()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
@@ -678,7 +680,7 @@ function PartnersTab({ partners, orders, onApprove }: { partners:Partner[]; orde
 export default function AdminPanel77() {
   const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
   const [partners, setPartners] = useState<Partner[]>(PARTNERS);
-  const [tab, setTab] = useState<"orders"|"commissions"|"partners">("orders");
+  const [tab, setTab] = useState<"orders"|"commissions"|"partners"|"assinaturas">("orders");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleStatus=(id:string,s:OrderStatus)=>setOrders(prev=>prev.map(o=>o.id===id?{...o,status:s}:o));
@@ -690,9 +692,10 @@ export default function AdminPanel77() {
   const totalComm=orders.filter(o=>o.status==="issued"&&o.channel==="partner").reduce((s,o)=>s+o.commission,0);
 
   const navItems = [
-    {id:"orders"      as const, label:"Pedidos",   icon:<Ic.Orders/>,   badge:pendingCount||undefined},
-    {id:"commissions" as const, label:"Comissões", icon:<Ic.Comm/>,     badge:undefined},
-    {id:"partners"    as const, label:"Parceiros", icon:<Ic.Partners/>, badge:pendingPartners||undefined},
+    {id:"orders"       as const, label:"Pedidos",      icon:<Ic.Orders/>,   badge:pendingCount||undefined},
+    {id:"commissions"  as const, label:"Comissões",    icon:<Ic.Comm/>,     badge:undefined},
+    {id:"partners"     as const, label:"Parceiros",    icon:<Ic.Partners/>, badge:pendingPartners||undefined},
+    {id:"assinaturas"  as const, label:"Assinaturas",  icon:<Ic.Subs/>,     badge:undefined},
   ];
 
   return (
@@ -776,9 +779,10 @@ export default function AdminPanel77() {
 
         {/* content */}
         <main style={{ flex:1, padding:"18px 20px", overflowY:"auto", animation:"fadeIn 0.2s ease both" }}>
-          {tab==="orders"      && <OrdersTab     orders={orders} onStatusChange={handleStatus}/>}
-          {tab==="commissions" && <CommissionsTab orders={orders} partners={partners}/>}
-          {tab==="partners"    && <PartnersTab   partners={partners} orders={orders} onApprove={handleApprove}/>}
+          {tab==="orders"       && <OrdersTab      orders={orders} onStatusChange={handleStatus}/>}
+          {tab==="commissions"  && <CommissionsTab orders={orders} partners={partners}/>}
+          {tab==="partners"     && <PartnersTab    partners={partners} orders={orders} onApprove={handleApprove}/>}
+          {tab==="assinaturas"  && <AssinaturasTab/>}
         </main>
       </div>
     </div>
