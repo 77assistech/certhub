@@ -4,6 +4,7 @@
 import { useState, useMemo } from "react";
 import { AssinaturasTab } from "./assinaturas-tab";
 import { ComissoesTab } from "./comissoes-tab";
+import { ParceirosTab } from "./parceiros-tab";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const B = {
@@ -524,159 +525,6 @@ function OrdersTab({ orders, onStatusChange }: { orders:Order[]; onStatusChange:
   );
 }
 
-function CommissionsTab({ orders, partners }: { orders:Order[]; partners:Partner[] }) {
-  const [payStatus, setPayStatus] = useState<Record<string,"pending"|"paid">>({});
-
-  const stats = useMemo(()=>partners.map(p=>{
-    const po=orders.filter(o=>o.partnerId===p.id);
-    const issued=po.filter(o=>o.status==="issued");
-    const totalComm=issued.reduce((s,o)=>s+o.commission,0);
-    const totalSale=issued.reduce((s,o)=>s+o.salePrice,0);
-    return {partner:p,issued,totalComm,totalSale};
-  }),[orders,partners]);
-
-  const grandTotal=stats.reduce((s,p)=>s+p.totalComm,0);
-
-  return (
-    <div>
-      {/* summary */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12, marginBottom:20 }}>
-        {[
-          {l:"Total a repassar", v:fmt(grandTotal),  c:B.orange},
-          {l:"Volume emitido",   v:fmt(orders.filter(o=>o.status==="issued").reduce((s,o)=>s+o.salePrice,0)), c:B.blue},
-          {l:"Parceiros ativos", v:String(partners.filter(p=>p.status==="active").length), c:B.green},
-          {l:"Fechamento",       v:"01/05/2025", c:B.amber},
-        ].map(c=>(
-          <div key={c.l} style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:13, padding:"16px 18px", position:"relative", overflow:"hidden" }}>
-            <div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:8, fontFamily:"'Barlow',sans-serif" }}>{c.l}</div>
-            <div style={{ fontSize:22, fontWeight:700, color:c.c, letterSpacing:"-0.5px", fontFamily:"'Rajdhani',sans-serif" }}>{c.v}</div>
-            <div style={{ position:"absolute", bottom:0, left:0, right:0, height:2, background:`${c.c}30` }}/>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:12 }}>
-        <button onClick={()=>printReport("commissions",orders,partners)} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:9, background:B.orangeGlow, border:`1px solid ${B.orangeBorder}`, color:B.orange, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow',sans-serif" }}>
-          <Ic.Print/> Imprimir relatório de comissões
-        </button>
-      </div>
-
-      {stats.map(({partner, issued, totalComm, totalSale})=>{
-        const isPaid=payStatus[partner.id]==="paid";
-        return (
-          <div key={partner.id} style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:13, marginBottom:14, overflow:"hidden" }}>
-            <div style={{ padding:"14px 18px", borderBottom:`1px solid ${B.border}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, background:B.dark }}>
-              <div style={{ display:"flex", alignItems:"center", gap:11 }}>
-                <div style={{ width:36, height:36, borderRadius:"50%", background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:B.black, fontFamily:"'Rajdhani',sans-serif", flexShrink:0 }}>
-                  {partner.name.split(" ").map(w=>w[0]).slice(0,2).join("")}
-                </div>
-                <div>
-                  <div style={{ fontSize:15, fontWeight:700, color:B.white, fontFamily:"'Rajdhani',sans-serif" }}>{partner.name}</div>
-                  <div style={{ fontSize:11.5, color:"#444", fontFamily:"'JetBrains Mono',monospace" }}>{partner.crc} · {partner.email}</div>
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:20, alignItems:"center", flexWrap:"wrap" }}>
-                <div style={{ textAlign:"right" }}>
-                  <div style={{ fontSize:10, color:"#444", marginBottom:2 }}>Vendas emitidas</div>
-                  <div style={{ fontSize:14, fontWeight:700, color:B.textPrimary, fontFamily:"'Rajdhani',sans-serif" }}>{fmt(totalSale)}</div>
-                </div>
-                <div style={{ textAlign:"right" }}>
-                  <div style={{ fontSize:10, color:"#444", marginBottom:2 }}>Comissão total</div>
-                  <div style={{ fontSize:20, fontWeight:700, color:B.orange, letterSpacing:"-0.5px", fontFamily:"'Rajdhani',sans-serif" }}>{fmt(totalComm)}</div>
-                </div>
-                <button onClick={()=>setPayStatus(s=>({...s,[partner.id]:isPaid?"pending":"paid"}))} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:9, background:isPaid?B.greenBg:B.orangeGlow, border:`1px solid ${isPaid?B.greenBorder:B.orangeBorder}`, color:isPaid?B.green:B.orange, fontWeight:700, fontSize:13, cursor:"pointer" }}>
-                  {isPaid?<><Ic.Check/> Pago</>:<>Marcar como pago</>}
-                </button>
-              </div>
-            </div>
-            <div style={{ overflowX:"auto" }}>
-              <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom:`1px solid ${B.border}` }}>
-                    {["Pedido","Cliente","Produto","Preço venda","Preço base","Comissão","Status"].map(h=>(
-                      <th key={h} style={{ padding:"9px 13px", fontSize:10, fontWeight:700, color:"#333", textAlign:"left", whiteSpace:"nowrap", textTransform:"uppercase", letterSpacing:"0.5px", fontFamily:"'JetBrains Mono',monospace" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {issued.map((o,i)=>(
-                    <tr key={o.id} style={{ borderBottom:i<issued.length-1?`1px solid rgba(255,255,255,0.03)`:"none" }}>
-                      <td style={{ padding:"9px 13px", fontSize:11.5, fontWeight:700, color:B.orange, fontFamily:"'JetBrains Mono',monospace" }}>{o.number}</td>
-                      <td style={{ padding:"9px 13px" }}><div style={{ fontSize:12.5, color:B.textPrimary }}>{o.client}</div><div style={{ fontSize:10, color:"#333" }}>{fmtDate(o.date)}</div></td>
-                      <td style={{ padding:"9px 13px", fontSize:12, color:B.textSec, whiteSpace:"nowrap" }}>{o.product}</td>
-                      <td style={{ padding:"9px 13px", fontSize:13, fontWeight:700, color:B.textPrimary, whiteSpace:"nowrap", fontFamily:"'Rajdhani',sans-serif" }}>{fmt(o.salePrice)}</td>
-                      <td style={{ padding:"9px 13px", fontSize:12, color:"#555", whiteSpace:"nowrap" }}>{fmt(o.basePrice)}</td>
-                      <td style={{ padding:"9px 13px", whiteSpace:"nowrap" }}><span style={{ fontSize:14, fontWeight:800, color:B.orange, fontFamily:"'Rajdhani',sans-serif" }}>{fmt(o.commission)}</span></td>
-                      <td style={{ padding:"9px 13px" }}><StatusBadge s={o.status}/></td>
-                    </tr>
-                  ))}
-                  {issued.length===0 && <tr><td colSpan={7} style={{ padding:"18px 13px", textAlign:"center", color:"#333", fontSize:13 }}>Nenhum pedido emitido.</td></tr>}
-                  {issued.length>0 && (
-                    <tr style={{ borderTop:`2px solid ${B.orangeBorder}`, background:B.dark }}>
-                      <td colSpan={5} style={{ padding:"10px 13px", fontSize:12, fontWeight:700, color:"#555", textAlign:"right" }}>Total — {issued.length} pedido{issued.length!==1?"s":""}</td>
-                      <td style={{ padding:"10px 13px" }}><span style={{ fontSize:16, fontWeight:800, color:B.orange, fontFamily:"'Rajdhani',sans-serif" }}>{fmt(totalComm)}</span></td>
-                      <td style={{ padding:"10px 13px" }}>
-                        <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:100, background:isPaid?B.greenBg:B.orangeGlow, color:isPaid?B.green:B.orange }}>
-                          {isPaid?"Pago":"Pendente"}
-                        </span>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function PartnersTab({ partners, orders, onApprove }: { partners:Partner[]; orders:Order[]; onApprove:(id:string)=>void }) {
-  const pending = partners.filter(p=>p.status==="pending");
-  return (
-    <div>
-      {pending.length>0 && (
-        <div style={{ marginBottom:14, padding:"12px 16px", borderRadius:11, background:B.amberBg, border:`1px solid rgba(245,158,11,0.25)`, display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ fontSize:13, fontWeight:700, color:B.amber }}>⚠ {pending.length} cadastro{pending.length!==1?"s":""} aguardando aprovação</span>
-        </div>
-      )}
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {partners.map(p=>{
-          const po=orders.filter(o=>o.partnerId===p.id);
-          const issued=po.filter(o=>o.status==="issued");
-          const totalComm=issued.reduce((s,o)=>s+o.commission,0);
-          const isPending=p.status==="pending";
-          return (
-            <div key={p.id} style={{ background:B.surface, border:`1px solid ${isPending?"rgba(245,158,11,0.25)":B.border}`, borderRadius:13, padding:"16px 20px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
-              <div style={{ width:42, height:42, borderRadius:"50%", background:isPending?B.amberBg:`linear-gradient(135deg,${B.orange},${B.orangeLight})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:800, color:isPending?B.amber:B.black, flexShrink:0, fontFamily:"'Rajdhani',sans-serif" }}>
-                {p.name.split(" ").map(w=>w[0]).slice(0,2).join("")}
-              </div>
-              <div style={{ flex:1, minWidth:180 }}>
-                <div style={{ fontSize:15, fontWeight:700, color:B.white, fontFamily:"'Rajdhani',sans-serif" }}>{p.name}</div>
-                <div style={{ fontSize:11.5, color:"#444", fontFamily:"'JetBrains Mono',monospace" }}>{p.crc}</div>
-                <div style={{ fontSize:12, color:"#444" }}>{p.email}</div>
-              </div>
-              <div style={{ display:"flex", gap:20, flexWrap:"wrap", alignItems:"center" }}>
-                {[{l:"Pedidos",v:String(po.length),c:B.textPrimary},{l:"Emitidos",v:String(issued.length),c:B.green},{l:"Comissão",v:fmt(totalComm),c:B.orange},{l:"Membro desde",v:fmtDate(p.joinedAt),c:B.textSec}].map(s=>(
-                  <div key={s.l} style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:10, color:"#444", marginBottom:2, fontFamily:"'JetBrains Mono',monospace" }}>{s.l}</div>
-                    <div style={{ fontSize:15, fontWeight:700, color:s.c, fontFamily:"'Rajdhani',sans-serif" }}>{s.v}</div>
-                  </div>
-                ))}
-                {isPending
-                  ?<button onClick={()=>onApprove(p.id)} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:9, background:B.greenBg, border:`1px solid ${B.greenBorder}`, color:B.green, fontWeight:700, fontSize:13, cursor:"pointer" }}><Ic.Check/> Aprovar</button>
-                  :<span style={{ fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:100, background:B.greenBg, color:B.green, border:`1px solid ${B.greenBorder}` }}>Ativo</span>
-                }
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export default function AdminPanel77() {
   const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
@@ -789,7 +637,7 @@ export default function AdminPanel77() {
         <main style={{ flex:1, padding:"18px 20px", overflowY:"auto", animation:"fadeIn 0.2s ease both" }}>
           {tab==="orders"       && <OrdersTab      orders={orders} onStatusChange={handleStatus}/>}
           {tab==="commissions"  && <ComissoesTab/>}
-          {tab==="partners"     && <PartnersTab    partners={partners} orders={orders} onApprove={handleApprove}/>}
+          {tab==="partners"     && <ParceirosTab/>}
           {tab==="assinaturas"  && <AssinaturasTab/>}
         </main>
       </div>
