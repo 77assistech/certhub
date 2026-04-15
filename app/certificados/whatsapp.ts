@@ -1,7 +1,7 @@
 // ─── Configuração ─────────────────────────────────────────────────────────────
 // Defina NEXT_PUBLIC_WA_NUMBER no .env.local para sobrescrever.
 export const WA_NUMBER =
-  process.env.NEXT_PUBLIC_WA_NUMBER ?? "5511999999999";
+  process.env.NEXT_PUBLIC_WA_NUMBER ?? "5577988160268";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 export interface WaMsgParams {
