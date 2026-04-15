@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from "react";
 import { AssinaturasTab } from "./assinaturas-tab";
+import { ComissoesTab } from "./comissoes-tab";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const B = {
@@ -780,7 +781,7 @@ export default function AdminPanel77() {
         {/* content */}
         <main style={{ flex:1, padding:"18px 20px", overflowY:"auto", animation:"fadeIn 0.2s ease both" }}>
           {tab==="orders"       && <OrdersTab      orders={orders} onStatusChange={handleStatus}/>}
-          {tab==="commissions"  && <CommissionsTab orders={orders} partners={partners}/>}
+          {tab==="commissions"  && <ComissoesTab/>}
           {tab==="partners"     && <PartnersTab    partners={partners} orders={orders} onApprove={handleApprove}/>}
           {tab==="assinaturas"  && <AssinaturasTab/>}
         </main>
