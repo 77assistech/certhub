@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useContadorData } from "./useContadorData";
+import { AssinaturasContadorTab } from "./assinaturas-contador-tab";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const B = {
@@ -13,7 +15,7 @@ const B = {
 
 type ProductId = "a1"|"a3_sem"|"a3_com";
 type OrderStatus = "pending_payment"|"paid"|"processing"|"issued"|"cancelled";
-type TabId = "dashboard"|"orders"|"prices"|"links";
+type TabId = "dashboard"|"orders"|"prices"|"links"|"assinaturas";
 
 const PRODUCTS = [
   {id:"a1"     as ProductId, name:"A1 PF/PJ",     label:"Certificado A1",  basePrice:99.00,  publicPrice:109.90, color:"#38BDF8", bg:"rgba(56,189,248,0.08)"},
@@ -57,6 +59,7 @@ const Ic = {
   Logout:    ()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   Info:      ()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
   Search:    ()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  Subs:      ()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
 };
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
@@ -313,10 +316,11 @@ function LinksTab() {
 }
 
 // ─── Orders Tab ───────────────────────────────────────────────────────────────
-function OrdersTab({ onNew }: { onNew:()=>void }) {
+type AnyOrder = { id:string; number:string; client:string; document:string; product:string; productId:string; salePrice:number; commission:number; status:OrderStatus; date:string; channel:string; };
+function OrdersTab({ onNew, orders }: { onNew:()=>void; orders: AnyOrder[] }) {
   const [filter, setFilter] = useState<OrderStatus|"all">("all");
   const [search, setSearch] = useState("");
-  const filtered = MOCK_ORDERS.filter(o=>{
+  const filtered = orders.filter(o=>{
     if(filter!=="all"&&o.status!==filter) return false;
     if(search){const q=search.toLowerCase();return o.client.toLowerCase().includes(q)||o.number.includes(q);}
     return true;
@@ -415,18 +419,27 @@ export default function DashboardContador77() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNewOrder, setShowNewOrder] = useState(false);
 
-  const month = "Abril 2025";
-  const monthOrders = MOCK_ORDERS.filter(o=>o.date.includes("/04/2025"));
+  const { loading, error, orders, comissoesTotal, comissoesPendentes, assinaturasAtivas } = useContadorData();
+
+  // Sem mocks — array vazio durante loading, dados reais depois
+  const allOrders = orders;
+
+  const now = new Date();
+  const monthStr = `/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`;
+  const month = now.toLocaleString("pt-BR",{month:"long",year:"numeric"}).replace(/^\w/,c=>c.toUpperCase());
+
+  const monthOrders = allOrders.filter(o=>o.date.includes(monthStr));
   const issued = monthOrders.filter(o=>o.status==="issued");
-  const totalComm = issued.reduce((s,o)=>s+o.commission,0);
+  const totalComm = comissoesTotal + comissoesPendentes;
   const totalSale = monthOrders.filter(o=>o.status!=="cancelled").reduce((s,o)=>s+o.salePrice,0);
-  const pending = MOCK_ORDERS.filter(o=>["pending_payment","paid","processing"].includes(o.status));
+  const pending = allOrders.filter(o=>["pending_payment","paid","processing"].includes(o.status));
 
   const nav = [
-    {id:"dashboard" as TabId, l:"Visão geral",   ic:<Ic.Dashboard/>},
-    {id:"orders"    as TabId, l:"Pedidos",        ic:<Ic.Orders/>},
-    {id:"prices"    as TabId, l:"Meus preços",    ic:<Ic.Prices/>},
-    {id:"links"     as TabId, l:"Links de venda", ic:<Ic.Links/>},
+    {id:"dashboard"   as TabId, l:"Visão geral",   ic:<Ic.Dashboard/>},
+    {id:"orders"      as TabId, l:"Pedidos",        ic:<Ic.Orders/>},
+    {id:"assinaturas" as TabId, l:"Indicações",     ic:<Ic.Subs/>},
+    {id:"prices"      as TabId, l:"Meus preços",    ic:<Ic.Prices/>},
+    {id:"links"       as TabId, l:"Links de venda", ic:<Ic.Links/>},
   ];
 
   return (
@@ -508,11 +521,21 @@ export default function DashboardContador77() {
                 <h2 style={{ fontSize:22, fontWeight:700, color:B.white, margin:"0 0 4px", fontFamily:"'Rajdhani',sans-serif" }}>Olá, João! 👋</h2>
                 <p style={{ fontSize:14, color:B.textSec }}>Resumo do mês de {month}.</p>
               </div>
+              {loading && (
+                <div style={{ marginBottom:16, padding:"10px 15px", borderRadius:9, background:"rgba(240,120,0,0.07)", border:"1px solid rgba(240,120,0,0.2)", fontSize:13, color:B.textSec }}>
+                  Carregando dados do banco…
+                </div>
+              )}
+              {error && (
+                <div style={{ marginBottom:16, padding:"10px 15px", borderRadius:9, background:"rgba(239,68,68,0.07)", border:"1px solid rgba(239,68,68,0.2)", fontSize:13, color:"#EF4444" }}>
+                  Erro ao carregar dados: {error}
+                </div>
+              )}
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:13, marginBottom:22 }}>
-                <MetricCard label="Comissão acumulada" value={fmt(totalComm)} sub="Fechamento em 01/05" color={B.orange} delay={0}/>
+                <MetricCard label="Comissão acumulada" value={fmt(totalComm)} sub={comissoesPendentes > 0 ? `${fmt(comissoesPendentes)} aguard. aprovação` : "Atualizado"} color={B.orange} delay={0}/>
                 <MetricCard label="Pedidos este mês" value={String(monthOrders.length)} sub={`${issued.length} emitidos`} color={B.blue} delay={60}/>
                 <MetricCard label="Volume vendido" value={fmt(totalSale)} sub="Soma dos pedidos" color={B.green} delay={120}/>
-                <MetricCard label="Pedidos pendentes" value={String(pending.length)} sub="Aguardando ação" color={B.amber} delay={180}/>
+                <MetricCard label="Assinaturas ativas" value={String(assinaturasAtivas)} sub="Sistemas indicados" color={B.purple} delay={180}/>
               </div>
 
               {/* two cols */}
@@ -523,7 +546,7 @@ export default function DashboardContador77() {
                     <h3 style={{ fontSize:14, fontWeight:700, color:B.white, margin:0, fontFamily:"'Rajdhani',sans-serif" }}>Últimos pedidos</h3>
                     <button onClick={()=>setTab("orders")} style={{ fontSize:12, fontWeight:600, color:B.orange, background:"none", border:"none", cursor:"pointer" }}>Ver todos →</button>
                   </div>
-                  {MOCK_ORDERS.slice(0,5).map((o,i)=>{
+                  {allOrders.slice(0,5).map((o,i)=>{
                     const p=PRODUCTS.find(pr=>pr.id===o.productId)!;
                     return (
                       <div key={o.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"11px 18px", borderBottom:i<4?`1px solid rgba(255,255,255,0.03)`:"none" }}>
@@ -581,9 +604,10 @@ export default function DashboardContador77() {
               </div>
             </div>
           )}
-          {tab==="orders" && <OrdersTab onNew={()=>setShowNewOrder(true)}/>}
-          {tab==="prices" && <PricesTab/>}
-          {tab==="links"  && <LinksTab/>}
+          {tab==="orders"      && <OrdersTab onNew={()=>setShowNewOrder(true)} orders={allOrders}/>}
+          {tab==="assinaturas" && <AssinaturasContadorTab/>}
+          {tab==="prices"      && <PricesTab/>}
+          {tab==="links"       && <LinksTab/>}
         </main>
       </div>
 
