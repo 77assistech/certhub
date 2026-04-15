@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/app/lib/supabase/client";
+import { WhatsAppButton } from "./WhatsAppButton";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const B = {
@@ -161,46 +162,75 @@ function formatarTel(raw: string) {
 }
 
 // ─── Tela de sucesso ──────────────────────────────────────────────────────────
-function Sucesso({ pedidoId, produto, onNovo }: { pedidoId: string; produto: Produto; onNovo: () => void }) {
+interface SucessoProps {
+  pedidoId: string;
+  nome: string;
+  produto: Produto;
+  onNovo: () => void;
+}
+
+function Sucesso({ pedidoId, nome, produto, onNovo }: SucessoProps) {
+  const produtoLabel = `${produto.label} – ${produto.subtipo}`;
+
   return (
-    <div style={{ textAlign:"center", padding:"48px 24px", maxWidth:520, margin:"0 auto" }}>
-      <div style={{ width:72, height:72, borderRadius:"50%", background:B.greenBg, border:`2px solid ${B.greenBorder}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:32 }}>
+    <div style={{ textAlign:"center", padding:"56px 24px", maxWidth:540, margin:"0 auto" }}>
+
+      {/* ícone de confirmação */}
+      <div style={{ width:76, height:76, borderRadius:"50%", background:B.greenBg, border:`2px solid ${B.greenBorder}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:34 }}>
         ✓
       </div>
-      <h2 style={{ fontSize:26, fontWeight:700, color:B.white, fontFamily:"'Rajdhani',sans-serif", marginBottom:8 }}>
+
+      <h2 style={{ fontSize:28, fontWeight:700, color:B.white, fontFamily:"'Rajdhani',sans-serif", marginBottom:8 }}>
         Pedido recebido!
       </h2>
-      <p style={{ fontSize:14, color:B.textSec, lineHeight:1.6, marginBottom:24 }}>
-        Seu pedido de <strong style={{ color:B.textPrimary }}>{produto.label} – {produto.subtipo}</strong> foi registrado com sucesso.
-        Nossa equipe entrará em contato em breve para concluir a emissão do certificado.
+      <p style={{ fontSize:14, color:B.textSec, lineHeight:1.6, marginBottom:28 }}>
+        Seu pedido de <strong style={{ color:B.textPrimary }}>{produtoLabel}</strong> foi registrado.
+        O próximo passo é iniciar o atendimento — fale agora com um especialista.
       </p>
 
-      <div style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:12, padding:"16px 20px", marginBottom:28, textAlign:"left" }}>
-        <div style={{ fontSize:10, fontWeight:700, color:"#444", textTransform:"uppercase", letterSpacing:"1.2px", fontFamily:"'JetBrains Mono',monospace", marginBottom:10 }}>Resumo do pedido</div>
-        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-          <span style={{ fontSize:13, color:B.textSec }}>Produto</span>
-          <span style={{ fontSize:13, color:B.textPrimary, fontWeight:600 }}>{produto.label}</span>
-        </div>
-        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-          <span style={{ fontSize:13, color:B.textSec }}>Tipo</span>
-          <span style={{ fontSize:13, color:B.textPrimary }}>{produto.subtipo}</span>
-        </div>
-        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-          <span style={{ fontSize:13, color:B.textSec }}>Valor</span>
-          <span style={{ fontSize:14, fontWeight:800, color:B.orange, fontFamily:"'Rajdhani',sans-serif" }}>{fmt(produto.preco)}</span>
-        </div>
-        <div style={{ display:"flex", justifyContent:"space-between" }}>
-          <span style={{ fontSize:13, color:B.textSec }}>Nº do pedido</span>
-          <span style={{ fontSize:11, fontWeight:700, color:"#555", fontFamily:"'JetBrains Mono',monospace" }}>{pedidoId.slice(0,8).toUpperCase()}</span>
-        </div>
+      {/* CTA principal — WhatsApp */}
+      <div style={{ marginBottom:20 }}>
+        <WhatsAppButton
+          pedidoId={pedidoId}
+          nome={nome}
+          produto={produtoLabel}
+          fullWidth
+        />
       </div>
 
-      <p style={{ fontSize:13, color:"#444", marginBottom:24 }}>
-        Entraremos em contato pelo e-mail ou telefone informados.
+      {/* resumo colapsado abaixo do CTA */}
+      <div style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:12, padding:"16px 20px", marginBottom:24, textAlign:"left" }}>
+        <div style={{ fontSize:10, fontWeight:700, color:"#444", textTransform:"uppercase", letterSpacing:"1.2px", fontFamily:"'JetBrains Mono',monospace", marginBottom:10 }}>
+          Resumo do pedido
+        </div>
+        {[
+          { l:"Cliente",    v: nome },
+          { l:"Produto",    v: produto.label },
+          { l:"Tipo",       v: produto.subtipo },
+          { l:"Valor",      v: fmt(produto.preco), highlight: true },
+          { l:"Nº do pedido", v: pedidoId.slice(0,8).toUpperCase(), mono: true },
+        ].map(row => (
+          <div key={row.l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBlock:6, borderBottom:`1px solid ${B.border}` }}>
+            <span style={{ fontSize:13, color:B.textSec }}>{row.l}</span>
+            <span style={{
+              fontSize: row.highlight ? 14 : 13,
+              fontWeight: row.highlight ? 800 : 600,
+              color: row.highlight ? B.orange : B.textPrimary,
+              fontFamily: row.mono ? "'JetBrains Mono',monospace" : "inherit",
+            }}>
+              {row.v}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p style={{ fontSize:12, color:"#383838", marginBottom:20, lineHeight:1.5 }}>
+        Você também pode aguardar — entraremos em contato pelo e-mail ou telefone informados.
       </p>
 
+      {/* ação secundária */}
       <button onClick={onNovo}
-        style={{ padding:"11px 28px", borderRadius:10, background:"rgba(255,255,255,0.06)", border:`1px solid ${B.border}`, color:B.textSec, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'Barlow',sans-serif" }}>
+        style={{ padding:"10px 24px", borderRadius:10, background:"transparent", border:`1px solid ${B.border}`, color:B.textSec, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Barlow',sans-serif" }}>
         Fazer novo pedido
       </button>
     </div>
@@ -334,7 +364,7 @@ export default function CertificadosPage() {
 
       {pedidoId && produto ? (
         // ── Tela de sucesso ──
-        <Sucesso pedidoId={pedidoId} produto={produto} onNovo={resetar}/>
+        <Sucesso pedidoId={pedidoId} nome={nome} produto={produto} onNovo={resetar}/>
       ) : (
         <div style={{ maxWidth:1100, margin:"0 auto", padding:"40px 24px 60px" }}>
 
