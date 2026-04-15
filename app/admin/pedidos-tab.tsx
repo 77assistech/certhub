@@ -30,9 +30,17 @@ const STATUS: Record<OrderStatus, { label:string; color:string; bg:string; next:
 };
 
 const PRODUTO_LABEL: Record<string, string> = {
-  a1: "A1 PF/PJ",
+  // códigos antigos (compatibilidade)
+  a1:     "A1 PF/PJ",
   a3_sem: "A3 Sem Token",
   a3_com: "A3 Com Token",
+  // códigos da página /certificados
+  a1_pf:     "A1 Pessoa Física",
+  a1_pj:     "A1 Pessoa Jurídica",
+  a3_pf_sem: "A3 PF – Sem Token",
+  a3_pj_sem: "A3 PJ – Sem Token",
+  a3_pf_com: "A3 PF – Com Token",
+  a3_pj_com: "A3 PJ – Com Token",
 };
 
 const PAYMENT_LABEL: Record<string, string> = {
