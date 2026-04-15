@@ -489,7 +489,7 @@ export default function DashboardContador77() {
               <div style={{ fontSize:10, color:"#333" }}>Parceiro · CRC-SP</div>
             </div>
           )}
-          {sidebarOpen&&<button style={{ background:"none",border:"none",cursor:"pointer",color:"#333",padding:3,display:"flex",borderRadius:5 }}><Ic.Logout/></button>}
+          {sidebarOpen&&<button onClick={async()=>{const {createClient}=await import("@/app/lib/supabase/client");await createClient().auth.signOut();window.location.href="/login";}} style={{ background:"none",border:"none",cursor:"pointer",color:"#333",padding:3,display:"flex",borderRadius:5 }}><Ic.Logout/></button>}
         </div>
       </aside>
 

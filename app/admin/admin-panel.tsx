@@ -737,7 +737,14 @@ export default function AdminPanel77() {
         </nav>
         <div style={{ padding:"12px 10px", borderTop:`1px solid ${B.border}`, display:"flex", alignItems:"center", gap:9 }}>
           <div style={{ width:28, height:28, borderRadius:"50%", background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:B.black, flexShrink:0, fontFamily:"'Rajdhani',sans-serif" }}>AD</div>
-          {sidebarOpen && <div><div style={{ fontSize:12, fontWeight:600, color:"#555" }}>Admin</div><div style={{ fontSize:10, color:"#333" }}>admin@77assistech.com.br</div></div>}
+          {sidebarOpen && <div style={{ flex:1 }}><div style={{ fontSize:12, fontWeight:600, color:"#555" }}>Admin</div><div style={{ fontSize:10, color:"#333" }}>77 Assistech</div></div>}
+          {sidebarOpen && (
+            <button onClick={async()=>{const {createClient}=await import("@/app/lib/supabase/client");await createClient().auth.signOut();window.location.href="/login";}}
+              style={{ background:"none",border:"none",cursor:"pointer",color:"#333",padding:3,display:"flex",borderRadius:5,flexShrink:0 }}
+              title="Sair">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+          )}
         </div>
       </aside>
 
