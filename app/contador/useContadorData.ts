@@ -31,11 +31,6 @@ export interface ContadorData {
   assinaturasAtivas: number;
 }
 
-// ID fixo para dev enquanto não tem autenticação.
-// Substitua pelo UUID real do contador criado no Supabase.
-// Quando auth estiver pronto, virá do session.user.id → contador.id
-const DEV_CONTADOR_ID: string | null = "8384b414-91a4-4652-99bf-11f08a9f78a4";
-
 function pad(n: number) {
   return String(n).padStart(4, "0");
 }
@@ -59,19 +54,17 @@ export function useContadorData(): ContadorData {
     async function load() {
       const supabase = createClient();
 
-      // ── 1. Resolve o contador logado (ou usa DEV_CONTADOR_ID) ─────────────
-      let contadorId = DEV_CONTADOR_ID;
+      // ── 1. Resolve o contador logado via sessão ───────────────────────────
+      let contadorId: string | null = null;
 
-      if (!contadorId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: contador } = await supabase
-            .from("contadores")
-            .select("id")
-            .eq("user_id", user.id)
-            .single();
-          contadorId = contador?.id ?? null;
-        }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: contador } = await supabase
+          .from("contadores")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+        contadorId = contador?.id ?? null;
       }
 
       // Sem contador identificado → retorna estado vazio (não é erro fatal)

@@ -277,55 +277,27 @@ export default function CertificadosPage() {
     const sb  = createClient();
     const doc = soDigitos(documento);
 
-    // 1. Busca ou cria o cliente pelo documento
-    let clienteId: string;
-    const { data: existente } = await sb
-      .from("clientes")
-      .select("id")
-      .eq("document", doc)
-      .maybeSingle();
+    // Toda a lógica de upsert de cliente + criação do pedido roda
+    // server-side via stored function SECURITY DEFINER.
+    // O anônimo nunca toca diretamente nas tabelas.
+    const { data, error } = await sb.rpc("criar_pedido_certificado", {
+      p_nome:        nome,
+      p_document:    doc,
+      p_email:       email,
+      p_phone:       telefone,
+      p_produto:     produto.id,
+      p_preco_venda: produto.preco,
+      p_comissao:    produto.comissao,
+      p_contador_id: refId ?? null,
+    });
 
-    if (existente) {
-      clienteId = existente.id;
-      // Atualiza dados caso tenham mudado
-      await sb.from("clientes").update({ name:nome, email, phone:telefone }).eq("id", clienteId);
-    } else {
-      const { data: novo, error: errCliente } = await sb
-        .from("clientes")
-        .insert({ name:nome, document:doc, email, phone:telefone })
-        .select("id")
-        .single();
-
-      if (errCliente || !novo) {
-        setErro("Erro ao registrar dados. Tente novamente.");
-        setLoading(false);
-        return;
-      }
-      clienteId = novo.id;
-    }
-
-    // 2. Cria o pedido de certificado
-    const { data: pedido, error: errPedido } = await sb
-      .from("pedidos_certificados")
-      .insert({
-        cliente_id:  clienteId,
-        contador_id: refId ?? null,            // null = venda direta
-        produto:     produto.id,
-        preco_venda: produto.preco,
-        comissao:    refId ? produto.comissao : 0,  // comissão só para indicações
-        status:      "pending_payment",
-        payment_method: null,                  // preenchido futuramente
-      })
-      .select("id")
-      .single();
-
-    if (errPedido || !pedido) {
+    if (error || !data) {
       setErro("Erro ao registrar pedido. Tente novamente.");
       setLoading(false);
       return;
     }
 
-    setPedidoId(pedido.id);
+    setPedidoId((data as { pedido_id: string }).pedido_id);
     setLoading(false);
   }
 
