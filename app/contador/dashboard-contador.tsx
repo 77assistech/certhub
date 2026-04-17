@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useContadorData } from "./useContadorData";
 import { AssinaturasContadorTab } from "./assinaturas-contador-tab";
+import { PedidosContadorTab } from "./pedidos-contador-tab";
+import { IndicacaoTab } from "./indicacao-tab";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const B = {
@@ -14,7 +16,6 @@ const B = {
 };
 
 type ProductId = "a1"|"a3_sem"|"a3_com";
-type OrderStatus = "pending_payment"|"paid"|"processing"|"issued"|"cancelled";
 type TabId = "dashboard"|"orders"|"prices"|"links"|"assinaturas";
 
 const PRODUCTS = [
@@ -23,26 +24,15 @@ const PRODUCTS = [
   {id:"a3_com" as ProductId, name:"A3 Com Token", label:"Certificado A3+", basePrice:189.00, publicPrice:229.90, color:B.green,   bg:"rgba(34,197,94,0.08)"},
 ];
 
-const STATUS: Record<OrderStatus,{label:string;color:string;bg:string}> = {
-  pending_payment:{label:"Aguard. pagamento",color:B.amber,   bg:"rgba(245,158,11,0.1)"},
-  paid:           {label:"Pago",             color:B.blue,    bg:"rgba(56,189,248,0.1)"},
-  processing:     {label:"Em processamento", color:B.purple,  bg:"rgba(167,139,250,0.1)"},
-  issued:         {label:"Emitido",          color:B.green,   bg:"rgba(34,197,94,0.1)"},
-  cancelled:      {label:"Cancelado",        color:B.red,     bg:"rgba(239,68,68,0.1)"},
+const STATUS_DASHBOARD: Record<string, { label: string; color: string; bg: string }> = {
+  pending_payment: { label: "Aguard. pagamento", color: B.amber,  bg: "rgba(245,158,11,0.1)"  },
+  paid:            { label: "Pago",              color: B.blue,   bg: "rgba(56,189,248,0.1)"  },
+  processing:      { label: "Em processamento",  color: B.purple, bg: "rgba(167,139,250,0.1)" },
+  issued:          { label: "Emitido",           color: B.green,  bg: "rgba(34,197,94,0.1)"   },
+  cancelled:       { label: "Cancelado",         color: B.red,    bg: "rgba(239,68,68,0.1)"   },
 };
 
-const fmt = (v:number) => `R$ ${v.toFixed(2).replace(".",",")}`;
-
-const MOCK_ORDERS = [
-  {id:"1",number:"77-2025-0145",client:"João Silva",      document:"123.456.789-00",   product:"A3 Sem Token",productId:"a3_sem" as ProductId,salePrice:149.90,commission:30.90,status:"issued"          as OrderStatus,date:"07/04/2025",channel:"link"},
-  {id:"2",number:"77-2025-0144",client:"Maria Souza",     document:"98.765.432/0001-10",product:"A1 PF/PJ",   productId:"a1"     as ProductId,salePrice:109.90,commission:10.90,status:"processing"       as OrderStatus,date:"06/04/2025",channel:"link"},
-  {id:"3",number:"77-2025-0141",client:"Tech Soluções ME",document:"12.345.678/0001-90",product:"A3 Com Token",productId:"a3_com" as ProductId,salePrice:210.00,commission:21.00,status:"issued"          as OrderStatus,date:"05/04/2025",channel:"manual"},
-  {id:"4",number:"77-2025-0138",client:"Roberto Alves",   document:"321.654.987-55",   product:"A3 Sem Token",productId:"a3_sem" as ProductId,salePrice:149.90,commission:30.90,status:"paid"             as OrderStatus,date:"04/04/2025",channel:"link"},
-  {id:"5",number:"77-2025-0130",client:"Fernanda Costa",  document:"456.789.123-77",   product:"A1 PF/PJ",   productId:"a1"     as ProductId,salePrice:109.90,commission:10.90,status:"issued"          as OrderStatus,date:"02/04/2025",channel:"link"},
-  {id:"6",number:"77-2025-0129",client:"Construtora XYZ", document:"55.321.654/0001-20",product:"A3 Com Token",productId:"a3_com" as ProductId,salePrice:229.90,commission:40.90,status:"issued"          as OrderStatus,date:"01/04/2025",channel:"manual"},
-  {id:"7",number:"77-2025-0125",client:"Ana Pereira",     document:"654.321.098-11",   product:"A1 PF/PJ",   productId:"a1"     as ProductId,salePrice:105.00,commission:6.00, status:"cancelled"        as OrderStatus,date:"28/03/2025",channel:"link"},
-  {id:"8",number:"77-2025-0120",client:"Marcos Lima",     document:"789.012.345-33",   product:"A3 Sem Token",productId:"a3_sem" as ProductId,salePrice:140.00,commission:21.00,status:"issued"          as OrderStatus,date:"25/03/2025",channel:"link"},
-];
+const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Ic = {
@@ -90,8 +80,8 @@ function Logo({ mini=false }: { mini?:boolean }) {
   );
 }
 
-function StatusBadge({ s }: { s: OrderStatus }) {
-  const c = STATUS[s];
+function StatusBadge({ s }: { s: string }) {
+  const c = STATUS_DASHBOARD[s] ?? { label: s, color: B.textSec, bg: "rgba(255,255,255,0.05)" };
   return (
     <span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"3px 9px", borderRadius:100, background:c.bg, color:c.color, fontSize:11, fontWeight:700, whiteSpace:"nowrap" }}>
       <span style={{ width:5,height:5,borderRadius:"50%",background:c.color,display:"block" }}/>
@@ -260,141 +250,6 @@ function PricesTab() {
   );
 }
 
-// ─── Links Tab ────────────────────────────────────────────────────────────────
-function LinksTab() {
-  const [copied, setCopied] = useState<string|null>(null);
-  const TOKEN = "cnt_a3b8c1d7";
-  const BASE = "https://77assistech.com.br/c";
-
-  const copy=(id:string,url:string)=>{
-    navigator.clipboard.writeText(url).catch(()=>{});
-    setCopied(id); setTimeout(()=>setCopied(null),2000);
-  };
-
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
-      <div style={{ marginBottom:4 }}>
-        <h2 style={{ fontSize:20, fontWeight:700, color:B.white, margin:"0 0 4px", fontFamily:"'Rajdhani',sans-serif" }}>Links de venda</h2>
-        <p style={{ fontSize:14, color:B.textSec }}>Compartilhe com seus clientes. Cada venda é rastreada e vinculada à sua conta.</p>
-      </div>
-      {PRODUCTS.map(p=>{
-        const url=`${BASE}/${p.id}/${TOKEN}`;
-        const ok=copied===p.id;
-        return (
-          <div key={p.id} style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:13, padding:"16px 18px" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:11, flexWrap:"wrap", gap:9 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ width:32,height:32,borderRadius:8,background:p.bg,border:`1px solid ${p.color}20`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={p.color} strokeWidth="1.9"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                </div>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:700, color:B.white, fontFamily:"'Rajdhani',sans-serif" }}>{p.name}</div>
-                  <div style={{ fontSize:11.5, color:B.textSec }}>Preço: {fmt(p.publicPrice)} · Comissão: {fmt(p.publicPrice-p.basePrice)}</div>
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:7 }}>
-                <button onClick={()=>copy(p.id,url)} style={{ display:"flex", alignItems:"center", gap:5, padding:"6px 12px", borderRadius:7, background:ok?B.greenBg:B.orangeGlow, border:`1px solid ${ok?B.greenBorder:B.orangeBorder}`, color:ok?B.green:B.orange, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
-                  {ok?<><Ic.Check/> Copiado!</>:<><Ic.Copy/> Copiar link</>}
-                </button>
-                <button style={{ display:"flex", alignItems:"center", gap:4, padding:"6px 11px", borderRadius:7, background:"rgba(255,255,255,0.04)", border:`1px solid ${B.border}`, color:B.textSec, fontSize:12.5, fontWeight:600, cursor:"pointer" }}>
-                  <Ic.Ext/> Abrir
-                </button>
-              </div>
-            </div>
-            <div style={{ background:B.dark, border:`1px solid ${B.border}`, borderRadius:8, padding:"8px 12px", fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:"#555", wordBreak:"break-all" }}>{url}</div>
-          </div>
-        );
-      })}
-      <div style={{ padding:"13px 15px", borderRadius:11, background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.2)" }}>
-        <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
-          <span style={{ color:B.amber, flexShrink:0 }}><Ic.Info/></span>
-          <p style={{ fontSize:13, color:B.textSec, margin:0, lineHeight:1.65 }}>Os links são únicos e rastreáveis. Ao acessar seu link, o cliente vai direto para a página de pagamento com seu preço configurado. Compartilhe via WhatsApp, e-mail ou redes sociais.</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Orders Tab ───────────────────────────────────────────────────────────────
-type AnyOrder = { id:string; number:string; client:string; document:string; product:string; productId:string; salePrice:number; commission:number; status:OrderStatus; date:string; channel:string; };
-function OrdersTab({ onNew, orders }: { onNew:()=>void; orders: AnyOrder[] }) {
-  const [filter, setFilter] = useState<OrderStatus|"all">("all");
-  const [search, setSearch] = useState("");
-  const filtered = orders.filter(o=>{
-    if(filter!=="all"&&o.status!==filter) return false;
-    if(search){const q=search.toLowerCase();return o.client.toLowerCase().includes(q)||o.number.includes(q);}
-    return true;
-  });
-  return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
-        <div>
-          <h2 style={{ fontSize:20, fontWeight:700, color:B.white, margin:"0 0 2px", fontFamily:"'Rajdhani',sans-serif" }}>Meus pedidos</h2>
-          <p style={{ fontSize:13, color:B.textSec, margin:0 }}>{filtered.length} pedido{filtered.length!==1?"s":""}</p>
-        </div>
-        <button onClick={onNew} style={{ display:"flex", alignItems:"center", gap:7, padding:"9px 17px", borderRadius:9, background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`, color:B.black, fontWeight:800, fontSize:14, border:"none", cursor:"pointer", fontFamily:"'Rajdhani',sans-serif" }}>
-          <Ic.Plus/> Novo pedido
-        </button>
-      </div>
-      <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:13 }}>
-        {([["all","Todos"]] as [string,string][]).concat(Object.entries(STATUS).map(([k,v])=>[k,v.label])).map(([k,l])=>(
-          <button key={k} onClick={()=>setFilter(k as OrderStatus|"all")} style={{ padding:"5px 12px", borderRadius:7, border:`1px solid ${filter===k?B.orange:B.border}`, background:filter===k?B.orangeGlow:"transparent", color:filter===k?B.orange:B.textSec, fontSize:12.5, fontWeight:600, cursor:"pointer" }}>{l}</button>
-        ))}
-      </div>
-      <div style={{ position:"relative", marginBottom:13 }}>
-        <span style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)", color:"#444" }}><Ic.Search/></span>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente ou número..." style={{ ...inp, paddingLeft:32, background:B.surface }}/>
-      </div>
-      <div style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:13, overflow:"hidden" }}>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead>
-              <tr style={{ background:B.dark, borderBottom:`1px solid ${B.border}` }}>
-                {["Pedido","Cliente","Produto","Canal","Preço venda","Comissão","Status","Data"].map(h=>(
-                  <th key={h} style={{ padding:"10px 13px", fontSize:9.5, fontWeight:700, color:"#444", textAlign:"left", whiteSpace:"nowrap", textTransform:"uppercase", letterSpacing:"0.8px", fontFamily:"'JetBrains Mono',monospace" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((o,i)=>{
-                const p=PRODUCTS.find(pr=>pr.id===o.productId)!;
-                return (
-                  <tr key={o.id} style={{ borderBottom:i<filtered.length-1?`1px solid rgba(255,255,255,0.03)`:"none" }}
-                    onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-                  >
-                    <td style={{ padding:"11px 13px", whiteSpace:"nowrap" }}>
-                      <div style={{ fontSize:11.5, fontWeight:700, color:B.orange, fontFamily:"'JetBrains Mono',monospace" }}>{o.number}</div>
-                    </td>
-                    <td style={{ padding:"11px 13px" }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:B.textPrimary }}>{o.client}</div>
-                      <div style={{ fontSize:10.5, color:"#444", fontFamily:"'JetBrains Mono',monospace" }}>{o.document}</div>
-                    </td>
-                    <td style={{ padding:"11px 13px", whiteSpace:"nowrap" }}>
-                      <span style={{ fontSize:11.5, fontWeight:600, padding:"3px 8px", borderRadius:5, background:p.bg, color:p.color }}>{o.product}</span>
-                    </td>
-                    <td style={{ padding:"11px 13px" }}>
-                      <span style={{ fontSize:12, color:B.textSec, fontWeight:600 }}>{o.channel==="link"?"Link":"Manual"}</span>
-                    </td>
-                    <td style={{ padding:"11px 13px", fontSize:13, fontWeight:700, color:B.textPrimary, whiteSpace:"nowrap", fontFamily:"'Rajdhani',sans-serif" }}>{fmt(o.salePrice)}</td>
-                    <td style={{ padding:"11px 13px", whiteSpace:"nowrap" }}>
-                      <span style={{ fontSize:13.5, fontWeight:800, color:o.status==="cancelled"?B.red:o.status==="issued"?B.orange:"#555", fontFamily:"'Rajdhani',sans-serif" }}>
-                        {o.status==="cancelled"?"—":fmt(o.commission)}
-                      </span>
-                    </td>
-                    <td style={{ padding:"11px 13px" }}><StatusBadge s={o.status}/></td>
-                    <td style={{ padding:"11px 13px", fontSize:12.5, color:"#444", whiteSpace:"nowrap" }}>{o.date}</td>
-                  </tr>
-                );
-              })}
-              {filtered.length===0&&<tr><td colSpan={8} style={{ padding:"40px", textAlign:"center", color:"#333", fontSize:13 }}>Nenhum pedido encontrado.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 // ─── Metric Card (standalone component) ──────────────────────────────────────
@@ -419,16 +274,17 @@ export default function DashboardContador77() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNewOrder, setShowNewOrder] = useState(false);
 
-  const { loading, error, orders, comissoesTotal, comissoesPendentes, assinaturasAtivas } = useContadorData();
+  const { loading, error, orders, comissoesTotal, comissoesPendentes, assinaturasAtivas, contadorId, contadorName, linkStats } = useContadorData();
 
-  // Sem mocks — array vazio durante loading, dados reais depois
   const allOrders = orders;
 
   const now = new Date();
-  const monthStr = `/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`;
   const month = now.toLocaleString("pt-BR",{month:"long",year:"numeric"}).replace(/^\w/,c=>c.toUpperCase());
 
-  const monthOrders = allOrders.filter(o=>o.date.includes(monthStr));
+  const monthOrders = allOrders.filter(o => {
+    const d = new Date(o.createdAt);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
   const issued = monthOrders.filter(o=>o.status==="issued");
   const totalComm = comissoesTotal + comissoesPendentes;
   const totalSale = monthOrders.filter(o=>o.status!=="cancelled").reduce((s,o)=>s+o.salePrice,0);
@@ -482,11 +338,13 @@ export default function DashboardContador77() {
         </div>
         {/* user */}
         <div style={{ padding:"12px 10px", borderTop:`1px solid ${B.border}`, display:"flex", alignItems:"center", gap:9 }}>
-          <div style={{ width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:B.black,flexShrink:0,fontFamily:"'Rajdhani',sans-serif" }}>JC</div>
+          <div style={{ width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:B.black,flexShrink:0,fontFamily:"'Rajdhani',sans-serif" }}>
+            {contadorName ? contadorName.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase() : "—"}
+          </div>
           {sidebarOpen && (
             <div style={{ flex:1, overflow:"hidden" }}>
-              <div style={{ fontSize:13, fontWeight:700, color:B.silver, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", fontFamily:"'Barlow',sans-serif" }}>João Contador</div>
-              <div style={{ fontSize:10, color:"#333" }}>Parceiro · CRC-SP</div>
+              <div style={{ fontSize:13, fontWeight:700, color:B.silver, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", fontFamily:"'Barlow',sans-serif" }}>{contadorName || "Carregando…"}</div>
+              <div style={{ fontSize:10, color:"#333" }}>Parceiro</div>
             </div>
           )}
           {sidebarOpen&&<button onClick={async()=>{const {createClient}=await import("@/app/lib/supabase/client");await createClient().auth.signOut();window.location.href="/login";}} style={{ background:"none",border:"none",cursor:"pointer",color:"#333",padding:3,display:"flex",borderRadius:5 }}><Ic.Logout/></button>}
@@ -510,7 +368,9 @@ export default function DashboardContador77() {
               <Ic.Bell/>
               {pending.length>0&&<span style={{ position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:B.red,border:`2px solid ${B.dark}` }}/>}
             </button>
-            <div style={{ width:32,height:32,borderRadius:"50%",background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:B.black,cursor:"pointer",fontFamily:"'Rajdhani',sans-serif" }}>JC</div>
+            <div style={{ width:32,height:32,borderRadius:"50%",background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:B.black,cursor:"pointer",fontFamily:"'Rajdhani',sans-serif" }}>
+              {contadorName ? contadorName.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase() : "—"}
+            </div>
           </div>
         </header>
 
@@ -518,7 +378,7 @@ export default function DashboardContador77() {
           {tab==="dashboard" && (
             <div style={{ animation:"fadeIn 0.25s ease both" }}>
               <div style={{ marginBottom:22 }}>
-                <h2 style={{ fontSize:22, fontWeight:700, color:B.white, margin:"0 0 4px", fontFamily:"'Rajdhani',sans-serif" }}>Olá, João! 👋</h2>
+                <h2 style={{ fontSize:22, fontWeight:700, color:B.white, margin:"0 0 4px", fontFamily:"'Rajdhani',sans-serif" }}>Olá, {contadorName.split(" ")[0] || "Contador"}! 👋</h2>
                 <p style={{ fontSize:14, color:B.textSec }}>Resumo do mês de {month}.</p>
               </div>
               {loading && (
@@ -547,7 +407,7 @@ export default function DashboardContador77() {
                     <button onClick={()=>setTab("orders")} style={{ fontSize:12, fontWeight:600, color:B.orange, background:"none", border:"none", cursor:"pointer" }}>Ver todos →</button>
                   </div>
                   {allOrders.slice(0,5).map((o,i)=>{
-                    const p=PRODUCTS.find(pr=>pr.id===o.productId)!;
+                    const p = PRODUCTS.find(pr=>pr.id===o.productId) ?? { bg:"rgba(255,255,255,0.05)", color:B.silver };
                     return (
                       <div key={o.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"11px 18px", borderBottom:i<4?`1px solid rgba(255,255,255,0.03)`:"none" }}>
                         <div style={{ width:32,height:32,borderRadius:8,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",color:p.color,flexShrink:0 }}>
@@ -604,10 +464,10 @@ export default function DashboardContador77() {
               </div>
             </div>
           )}
-          {tab==="orders"      && <OrdersTab onNew={()=>setShowNewOrder(true)} orders={allOrders}/>}
+          {tab==="orders"      && <PedidosContadorTab orders={allOrders} loading={loading}/>}
           {tab==="assinaturas" && <AssinaturasContadorTab/>}
           {tab==="prices"      && <PricesTab/>}
-          {tab==="links"       && <LinksTab/>}
+          {tab==="links"       && <IndicacaoTab contadorId={contadorId} stats={linkStats}/>}
         </main>
       </div>
 
