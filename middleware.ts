@@ -33,18 +33,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Lê role do user_metadata
-  const role = user.user_metadata?.role as string | undefined;
+  // Lê role do app_metadata (imutável pelo usuário — seguro para roteamento)
+  const appRole  = user.app_metadata?.role as string | undefined;
+  // Fallback: user_metadata para contadores (definido no cadastro, não é vetor de escalada)
+  const metaRole = user.user_metadata?.role as string | undefined;
+  const isAdmin  = appRole === "admin";
+  const isContador = !isAdmin && (metaRole === "contador" || appRole === "contador");
 
   // Admin tentando acessar /contador → bloqueia
-  if (role === "admin" && pathname.startsWith("/contador")) {
+  if (isAdmin && pathname.startsWith("/contador")) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin";
     return NextResponse.redirect(url);
   }
 
   // Contador tentando acessar /admin → bloqueia
-  if (role === "contador" && pathname.startsWith("/admin")) {
+  if (isContador && pathname.startsWith("/admin")) {
     const url = request.nextUrl.clone();
     url.pathname = "/contador";
     return NextResponse.redirect(url);

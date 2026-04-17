@@ -56,12 +56,14 @@ export default function LoginPage() {
       return;
     }
 
-    // Lê a role do user_metadata
-    const role = data.user?.user_metadata?.role as string | undefined;
+    // app_metadata → admin (imutável pelo usuário)
+    // user_metadata → contador (definido no cadastro)
+    const appRole  = data.user?.app_metadata?.role as string | undefined;
+    const metaRole = data.user?.user_metadata?.role as string | undefined;
 
-    if (role === "admin") {
+    if (appRole === "admin") {
       router.push("/admin");
-    } else if (role === "contador") {
+    } else if (metaRole === "contador" || appRole === "contador") {
       router.push("/contador");
     } else {
       // Tenta inferir pela existência de registro em contadores

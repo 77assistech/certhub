@@ -223,7 +223,8 @@ CREATE POLICY "contadores__admin_all"
 
 -- ── clientes ─────────────────────────────────────────────────────────────────
 -- Sem acesso público direto (uso via stored function)
--- Contador: vê apenas clientes associados a ele
+-- Contador: vê clientes que têm pedidos vinculados a ele
+--   (via pedidos_certificados — correto pois um cliente pode comprar de vários contadores)
 -- Admin: acesso total
 
 CREATE POLICY "clientes__contador_select"
@@ -231,8 +232,12 @@ CREATE POLICY "clientes__contador_select"
   FOR SELECT
   TO authenticated
   USING (
-    contador_id = public.my_contador_id()
-    AND NOT public.is_admin()
+    NOT public.is_admin()
+    AND id IN (
+      SELECT cliente_id
+      FROM public.pedidos_certificados
+      WHERE contador_id = public.my_contador_id()
+    )
   );
 
 CREATE POLICY "clientes__admin_all"
