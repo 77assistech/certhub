@@ -161,7 +161,55 @@ function formatarTel(raw: string) {
           .slice(0, 15);
 }
 
-// ─── Tela de sucesso ──────────────────────────────────────────────────────────
+// ─── Tela: pagamento aprovado (retorno do MP) ─────────────────────────────────
+function PagamentoAprovado({ pedidoId, onNovo }: { pedidoId: string; onNovo: () => void }) {
+  return (
+    <div style={{ textAlign:"center", padding:"56px 24px", maxWidth:500, margin:"0 auto" }}>
+      <div style={{ width:80, height:80, borderRadius:"50%", background:B.greenBg, border:`2px solid ${B.greenBorder}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:38 }}>
+        ✓
+      </div>
+      <h2 style={{ fontSize:28, fontWeight:700, color:B.green, fontFamily:"'Rajdhani',sans-serif", marginBottom:8 }}>
+        Pagamento aprovado!
+      </h2>
+      <p style={{ fontSize:14, color:B.textSec, lineHeight:1.6, marginBottom:12 }}>
+        Seu pagamento foi confirmado. Nossa equipe já foi notificada e entrará em contato para agendar a emissão do certificado.
+      </p>
+      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:"#444", marginBottom:32 }}>
+        Pedido: {pedidoId.slice(0,8).toUpperCase()}
+      </div>
+      <button onClick={onNovo}
+        style={{ padding:"10px 24px", borderRadius:10, background:"transparent", border:`1px solid ${B.border}`, color:B.textSec, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+        Fazer novo pedido
+      </button>
+    </div>
+  );
+}
+
+// ─── Tela: pagamento pendente / rejeitado ─────────────────────────────────────
+function PagamentoPendente({ status, onNovo }: { status: string; onNovo: () => void }) {
+  const isPending = status === "pending";
+  return (
+    <div style={{ textAlign:"center", padding:"56px 24px", maxWidth:500, margin:"0 auto" }}>
+      <div style={{ width:80, height:80, borderRadius:"50%", background: isPending ? "rgba(245,158,11,0.1)" : B.redBg, border:`2px solid ${isPending ? "rgba(245,158,11,0.3)" : "rgba(239,68,68,0.3)"}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:34 }}>
+        {isPending ? "⏳" : "✕"}
+      </div>
+      <h2 style={{ fontSize:26, fontWeight:700, color: isPending ? "#F59E0B" : B.red, fontFamily:"'Rajdhani',sans-serif", marginBottom:8 }}>
+        {isPending ? "Pagamento em análise" : "Pagamento não aprovado"}
+      </h2>
+      <p style={{ fontSize:14, color:B.textSec, lineHeight:1.6, marginBottom:28 }}>
+        {isPending
+          ? "Seu pagamento está sendo processado. Você receberá uma confirmação em breve."
+          : "O pagamento não foi aprovado. Tente novamente ou escolha outra forma de pagamento."}
+      </p>
+      <button onClick={onNovo}
+        style={{ padding:"11px 28px", borderRadius:10, background:`linear-gradient(135deg,${B.orange},${B.orangeLight})`, color:B.black, fontWeight:800, fontSize:14, border:"none", cursor:"pointer", fontFamily:"'Rajdhani',sans-serif" }}>
+        Tentar novamente
+      </button>
+    </div>
+  );
+}
+
+// ─── Tela de sucesso (pedido criado — aguardando pagamento) ───────────────────
 interface SucessoProps {
   pedidoId: string;
   nome: string;
@@ -171,64 +219,98 @@ interface SucessoProps {
 
 function Sucesso({ pedidoId, nome, produto, onNovo }: SucessoProps) {
   const produtoLabel = `${produto.label} – ${produto.subtipo}`;
+  const [loadingPag, setLoadingPag] = useState(false);
+  const [erroPag,    setErroPag]    = useState("");
+
+  async function pagar() {
+    setErroPag(""); setLoadingPag(true);
+    try {
+      const res = await fetch("/api/pagamento/criar", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ pedido_id: pedidoId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.checkout_url) {
+        setErroPag(json.error ?? "Erro ao gerar link de pagamento.");
+        setLoadingPag(false);
+        return;
+      }
+      // Redireciona para o Checkout Pro do Mercado Pago
+      window.location.href = json.checkout_url;
+    } catch {
+      setErroPag("Erro de conexão. Tente novamente.");
+      setLoadingPag(false);
+    }
+  }
 
   return (
     <div style={{ textAlign:"center", padding:"56px 24px", maxWidth:540, margin:"0 auto" }}>
 
-      {/* ícone de confirmação */}
+      {/* ícone */}
       <div style={{ width:76, height:76, borderRadius:"50%", background:B.greenBg, border:`2px solid ${B.greenBorder}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:34 }}>
         ✓
       </div>
 
       <h2 style={{ fontSize:28, fontWeight:700, color:B.white, fontFamily:"'Rajdhani',sans-serif", marginBottom:8 }}>
-        Pedido recebido!
+        Pedido registrado!
       </h2>
       <p style={{ fontSize:14, color:B.textSec, lineHeight:1.6, marginBottom:28 }}>
-        Seu pedido de <strong style={{ color:B.textPrimary }}>{produtoLabel}</strong> foi registrado.
-        O próximo passo é iniciar o atendimento — fale agora com um especialista.
+        Para concluir, realize o pagamento agora. Assim que confirmado, sua solicitação entra em processamento imediatamente.
       </p>
 
-      {/* CTA principal — WhatsApp */}
+      {/* CTA principal — Pagar agora */}
+      <button onClick={pagar} disabled={loadingPag}
+        style={{ width:"100%", padding:"15px", borderRadius:12, background: loadingPag ? "rgba(240,120,0,0.4)" : `linear-gradient(135deg,${B.orange},${B.orangeLight})`, color:B.black, fontWeight:800, fontSize:16, border:"none", cursor: loadingPag ? "not-allowed" : "pointer", fontFamily:"'Rajdhani',sans-serif", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+        {loadingPag ? (
+          "Gerando link…"
+        ) : (
+          <>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            Pagar {fmt(produto.preco)}
+          </>
+        )}
+      </button>
+
+      {erroPag && (
+        <div style={{ padding:"10px 14px", borderRadius:8, background:B.redBg, border:"1px solid rgba(239,68,68,0.2)", color:B.red, fontSize:13, marginBottom:14 }}>
+          {erroPag}
+        </div>
+      )}
+
+      {/* CTA secundário — WhatsApp */}
       <div style={{ marginBottom:20 }}>
         <WhatsAppButton
           pedidoId={pedidoId}
           nome={nome}
           produto={produtoLabel}
+          variant="outline"
           fullWidth
+          label="Prefiro falar no WhatsApp"
         />
       </div>
 
-      {/* resumo colapsado abaixo do CTA */}
+      {/* resumo */}
       <div style={{ background:B.surface, border:`1px solid ${B.border}`, borderRadius:12, padding:"16px 20px", marginBottom:24, textAlign:"left" }}>
         <div style={{ fontSize:10, fontWeight:700, color:"#444", textTransform:"uppercase", letterSpacing:"1.2px", fontFamily:"'JetBrains Mono',monospace", marginBottom:10 }}>
           Resumo do pedido
         </div>
         {[
-          { l:"Cliente",    v: nome },
-          { l:"Produto",    v: produto.label },
-          { l:"Tipo",       v: produto.subtipo },
-          { l:"Valor",      v: fmt(produto.preco), highlight: true },
+          { l:"Cliente",      v: nome },
+          { l:"Produto",      v: produto.label },
+          { l:"Tipo",         v: produto.subtipo },
+          { l:"Valor",        v: fmt(produto.preco), highlight: true },
           { l:"Nº do pedido", v: pedidoId.slice(0,8).toUpperCase(), mono: true },
         ].map(row => (
           <div key={row.l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBlock:6, borderBottom:`1px solid ${B.border}` }}>
             <span style={{ fontSize:13, color:B.textSec }}>{row.l}</span>
-            <span style={{
-              fontSize: row.highlight ? 14 : 13,
-              fontWeight: row.highlight ? 800 : 600,
-              color: row.highlight ? B.orange : B.textPrimary,
-              fontFamily: row.mono ? "'JetBrains Mono',monospace" : "inherit",
-            }}>
+            <span style={{ fontSize: row.highlight ? 14 : 13, fontWeight: row.highlight ? 800 : 600, color: row.highlight ? B.orange : B.textPrimary, fontFamily: row.mono ? "'JetBrains Mono',monospace" : "inherit" }}>
               {row.v}
             </span>
           </div>
         ))}
       </div>
 
-      <p style={{ fontSize:12, color:"#383838", marginBottom:20, lineHeight:1.5 }}>
-        Você também pode aguardar — entraremos em contato pelo e-mail ou telefone informados.
-      </p>
-
-      {/* ação secundária */}
       <button onClick={onNovo}
         style={{ padding:"10px 24px", borderRadius:10, background:"transparent", border:`1px solid ${B.border}`, color:B.textSec, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Barlow',sans-serif" }}>
         Fazer novo pedido
@@ -252,6 +334,10 @@ export default function CertificadosPage() {
   const [erro, setErro]                 = useState("");
   const [pedidoId, setPedidoId]         = useState<string | null>(null);
   const [contadorNome, setContadorNome] = useState<string | null>(null);
+
+  // Retorno do Checkout Pro do Mercado Pago
+  const paymentStatus   = params.get("payment"); // "approved" | "rejected" | "pending"
+  const paymentPedidoId = params.get("pedido");
 
   const produto = PRODUTOS.find(p => p.id === produtoId) ?? null;
 
@@ -334,8 +420,13 @@ export default function CertificadosPage() {
         </div>
       </header>
 
-      {pedidoId && produto ? (
-        // ── Tela de sucesso ──
+      {/* Retorno do Mercado Pago */}
+      {paymentStatus === "approved" && paymentPedidoId ? (
+        <PagamentoAprovado pedidoId={paymentPedidoId} onNovo={resetar}/>
+      ) : paymentStatus && paymentPedidoId ? (
+        <PagamentoPendente status={paymentStatus} onNovo={resetar}/>
+      ) : pedidoId && produto ? (
+        // ── Tela de sucesso (pedido criado, aguardando pagamento) ──
         <Sucesso pedidoId={pedidoId} nome={nome} produto={produto} onNovo={resetar}/>
       ) : (
         <div style={{ maxWidth:1100, margin:"0 auto", padding:"40px 24px 60px" }}>
