@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Payment } from "mercadopago";
-import { getMPClient } from "@/app/lib/mercadopago";
+import { getMPClient, PRODUTO_LABEL_MP } from "@/app/lib/mercadopago";
 import { createAdminClient } from "@/app/lib/supabase/admin";
+import { dispararEmailsPagamento } from "@/app/lib/email/service";
 import crypto from "crypto";
 
 // ─── Validação de assinatura do Mercado Pago ──────────────────────────────────
@@ -88,14 +89,24 @@ export async function POST(req: NextRequest) {
   const pedidoId = payment.external_reference;
 
   // ── 5. Atualiza pedido no banco ───────────────────────────────────────────
+  let pedidoAtualizado = false;
+  let dadosParaEmail: {
+    produto:      string;
+    preco_venda:  number;
+    clientes:     { name: string; email: string } | null;
+  } | null = null;
+
   try {
     const db = createAdminClient();
 
-    // Idempotência: só atualiza se ainda estiver em pending_payment
-    // Evita sobrescrever status avançados (processing, issued…)
+    // Busca pedido com dados do cliente para usar nos e-mails
+    // (join com clientes para evitar uma segunda query depois)
     const { data: pedido } = await db
       .from("pedidos_certificados")
-      .select("status")
+      .select(`
+        status, produto, preco_venda,
+        clientes!cliente_id(name, email)
+      `)
       .eq("id", pedidoId)
       .single();
 
@@ -104,6 +115,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse(null, { status: 200 });
     }
 
+    // Idempotência: só atualiza se ainda estiver em pending_payment
     if (pedido.status === "pending_payment") {
       await db
         .from("pedidos_certificados")
@@ -113,10 +125,35 @@ export async function POST(req: NextRequest) {
           mp_payment_id:  String(payment.id),
         })
         .eq("id", pedidoId);
+
+      pedidoAtualizado = true;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      dadosParaEmail   = pedido as any;
     }
     // Se status já avançou (paid, processing, issued…), ignora silenciosamente
   } catch (err) {
     console.error("[webhook/pagamento] Erro ao atualizar pedido:", err);
+  }
+
+  // ── 6. Dispara e-mails — desacoplado e não-bloqueante ────────────────────
+  // Só envia quando o pedido foi realmente atualizado (evita reenvio em retentativas)
+  if (pedidoAtualizado && dadosParaEmail) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cliente = dadosParaEmail.clientes as any;
+      await dispararEmailsPagamento({
+        pedidoId,
+        shortId:       pedidoId.slice(0, 8).toUpperCase(),
+        clienteNome:   cliente?.name  ?? "Cliente",
+        clienteEmail:  cliente?.email ?? "",
+        produto:       PRODUTO_LABEL_MP[dadosParaEmail.produto] ?? dadosParaEmail.produto,
+        preco:         Number(dadosParaEmail.preco_venda),
+        paymentMethod: payment.payment_type_id ?? "mercadopago",
+      });
+    } catch (err) {
+      // Falha de e-mail NUNCA cancela o 200 — pagamento já foi confirmado no banco
+      console.error("[webhook/pagamento] Erro ao disparar e-mails:", err);
+    }
   }
 
   // Sempre retorna 200 — o MP interpreta qualquer outro código como falha e retenta
