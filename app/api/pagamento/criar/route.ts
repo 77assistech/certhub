@@ -106,6 +106,14 @@ export async function POST(req: NextRequest) {
           auto_return:     "approved",
           notification_url:`${appUrl}/api/pagamento/webhook`,
         }),
+        // Aceita todos os meios de pagamento disponíveis na conta MP,
+        // incluindo PIX, cartão de crédito, débito e boleto.
+        // Listas vazias = sem exclusões = MP decide o que exibir.
+        payment_methods: {
+          excluded_payment_types:   [],
+          excluded_payment_methods: [],
+          installments:             12,
+        },
         statement_descriptor: "77 ASSISTECH",
         // Expira em 24h para evitar links zumbis
         expires:              true,
