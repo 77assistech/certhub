@@ -69,6 +69,15 @@ export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cliente = pedido.clientes as any;
 
+  // Modo de teste: cobra R$1,00 no checkout do MP quando MP_PRECO_TESTE=true.
+  // Afeta apenas o unit_price enviado ao MP — o banco mantém o valor real.
+  // NUNCA definir esta variável em produção (Vercel Production).
+  const modoTeste  = process.env.MP_PRECO_TESTE === "true";
+  const precoFinal = modoTeste ? 1.00 : Number(pedido.preco_venda);
+  if (modoTeste) {
+    console.info("[pagamento/criar] MP_PRECO_TESTE ativo — cobrando R$1,00 (original:", pedido.preco_venda, ")");
+  }
+
   let result;
   try {
     result = await new Preference(getMPClient()).create({
@@ -78,7 +87,7 @@ export async function POST(req: NextRequest) {
             id:          pedido.id,
             title:       PRODUTO_LABEL_MP[pedido.produto] ?? pedido.produto,
             quantity:    1,
-            unit_price:  Number(pedido.preco_venda),
+            unit_price:  precoFinal,
             currency_id: "BRL",
           },
         ],
