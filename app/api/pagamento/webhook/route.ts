@@ -129,9 +129,11 @@ export async function POST(req: NextRequest) {
       await db
         .from("pedidos_certificados")
         .update({
-          status:         "paid",
-          payment_method: payment.payment_type_id ?? "mercadopago",
-          mp_payment_id:  String(payment.id),
+          status:              "paid",
+          payment_method:      payment.payment_type_id ?? "mercadopago",
+          mp_payment_id:       String(payment.id),
+          mp_paid_at:          new Date().toISOString(),
+          mp_webhook_payload:  payment as unknown as Record<string, unknown>,
         })
         .eq("id", pedidoId);
 

@@ -99,9 +99,9 @@ export async function POST(req: NextRequest) {
         // back_urls e auto_return só funcionam com HTTPS no MP
         ...(appUrl.startsWith("https://") && {
           back_urls: {
-            success: `${appUrl}/certificados?payment=approved&pedido=${pedido.id}`,
-            failure: `${appUrl}/certificados?payment=rejected&pedido=${pedido.id}`,
-            pending: `${appUrl}/certificados?payment=pending&pedido=${pedido.id}`,
+            success: `${appUrl}/sucesso?pedido=${pedido.id}`,
+            failure: `${appUrl}/erro?pedido=${pedido.id}`,
+            pending: `${appUrl}/pendente?pedido=${pedido.id}`,
           },
           auto_return:     "approved",
           notification_url:`${appUrl}/api/pagamento/webhook`,
