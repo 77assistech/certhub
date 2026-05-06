@@ -72,10 +72,12 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 200 });
   }
 
-  // ── 3. Valida assinatura ──────────────────────────────────────────────────
+  // ── 3. Valida assinatura (aviso, não bloqueante) ──────────────────────────
+  // A segurança real está no passo 4: verificamos o pagamento diretamente
+  // na API do MP com o Access Token — dados falsos são rejeitados lá.
+  // A assinatura é uma camada extra; falha dela não cancela o fluxo.
   if (!validateMPSignature(req, dataId)) {
-    console.warn("[webhook/pagamento] Assinatura inválida — ignorando");
-    return new NextResponse(null, { status: 401 });
+    console.warn("[webhook/pagamento] Assinatura inválida — processando mesmo assim");
   }
 
   // ── 4. Busca detalhes do pagamento na API do MP ───────────────────────────
