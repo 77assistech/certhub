@@ -71,8 +71,17 @@ export async function POST(req: NextRequest) {
 
   // Modo de teste: cobra R$1,00 no checkout do MP quando MP_PRECO_TESTE=true.
   // Afeta apenas o unit_price enviado ao MP — o banco mantém o valor real.
-  // NUNCA definir esta variável em produção (Vercel Production).
-  const modoTeste  = process.env.MP_PRECO_TESTE === "true";
+  const modoTeste = process.env.MP_PRECO_TESTE === "true";
+
+  // Trava de segurança: impede preço de teste vazar em produção
+  if (modoTeste && process.env.NODE_ENV === "production") {
+    console.error("[pagamento/criar] CRÍTICO: MP_PRECO_TESTE=true em produção — bloqueado");
+    return NextResponse.json(
+      { error: "Configuração inválida em produção" },
+      { status: 500 }
+    );
+  }
+
   const precoFinal = modoTeste ? 1.00 : Number(pedido.preco_venda);
   if (modoTeste) {
     console.info("[pagamento/criar] MP_PRECO_TESTE ativo — cobrando R$1,00 (original:", pedido.preco_venda, ")");
